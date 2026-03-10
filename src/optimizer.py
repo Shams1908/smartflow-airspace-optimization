@@ -86,32 +86,3 @@ def update_congestion_weights(graph, density_map, base_cost=1.0):
         
         # Update routing cost
         data['weight'] = base_cost + congestion_penalty
-
-
-############################################
-
-if __name__ == "__main__":
-
-    print("===== TEST 1: Basic Pathfinding =====")
-
-    layout = [
-        [0,0,0,0,0],
-        [0,1,1,1,0],
-        [0,0,0,1,0],
-        [0,1,0,0,0],
-        [0,0,0,1,0]
-    ]
-
-    start = (0,0)
-    goal = (4,4)
-
-    graph = build_graph(layout)
-
-    print("Graph nodes:", len(graph.nodes()))
-    print("Graph edges:", len(graph.edges()))
-
-    path = find_path(graph,start,goal)
-
-    print("Start:", start)
-    print("Goal:", goal)
-    print("Path:", path)
