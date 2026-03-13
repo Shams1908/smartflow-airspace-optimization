@@ -5,6 +5,7 @@ from src.optimizer import build_graph, find_path, update_congestion_weights
 from src.movement_resolver import resolve_movements
 from src.resource_manager import ResourceManager
 from src.analytics import PerformanceAnalytics
+from src.emergency_manager import EmergencyManager
 
 class Simulation:
     def __init__(self, layout, spawn_rate=0.2):
@@ -41,6 +42,37 @@ class Simulation:
         total_tables = len(self.tables)
         self.resource_manager = ResourceManager(capacity=total_tables)
         self.analytics = PerformanceAnalytics()
+        self.emergency_manager = EmergencyManager()
+        
+    def trigger_emergency_evacuation(self):
+        self.emergency_manager.trigger_evacuation(self.active_students, self.exits)
+        
+    def trigger_table_failure(self, failed_tables=2):
+        self.emergency_manager.trigger_table_failure(self.resource_manager, failed_tables)
+        
+    def block_random_walkway(self):
+        # Pick a random walkable node from our mask to block
+        walkables = []
+        for r in range(self.rows):
+            for c in range(self.cols):
+                if self.layout[r][c] in [0, 4, 5, 2]: # Empty, counter, table, entry
+                    walkables.append((r,c))
+        
+        if walkables:
+            cell = random.choice(walkables)
+            self.emergency_manager.block_walkway(self.layout, cell)
+            # Flag for graph rebuild
+            self._requires_graph_rebuild = True
+            return cell
+        return None
+        
+    def clear_emergencies(self):
+        self.emergency_manager.clear_emergency(
+            layout=self.layout, 
+            resource_manager=self.resource_manager, 
+            original_table_capacity=len(self.tables)
+        )
+        self._requires_graph_rebuild = True
 
     def _find_cells(self, cell_type):
         cells = []
@@ -129,6 +161,12 @@ class Simulation:
 
     def update_routing(self):
         """Calculates dynamic routing for all moving students using optimizer.py"""
+        # Rebuild graph if layout was mutated (e.g. walkways blocked by emergency)
+        if getattr(self, '_requires_graph_rebuild', False):
+            simple_mask = [[1 if cell == 1 else 0 for cell in row] for row in self.layout]
+            self.graph = build_graph(simple_mask)
+            self._requires_graph_rebuild = False
+            
         # Create a density map of current positions to penalize crowded areas
         density_map = {}
         for s in self.active_students:

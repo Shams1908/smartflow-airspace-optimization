@@ -15,7 +15,7 @@ def build_graph(layout):
         nx.Graph: Spatial graph for pathfinding.
     """
     graph = nx.Graph()
-    if not layout or not layout[0]:
+    if layout is None or len(layout) == 0 or len(layout[0]) == 0:
         return graph
 
     rows = len(layout)
